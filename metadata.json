@@ -1,0 +1,5 @@
+{
+  "name": "BananaSlides AI",
+  "description": "Professional slide deck generator with automated visual prompt engineering and high-quality image generation using Gemini.",
+  "requestFramePermissions": []
+}
