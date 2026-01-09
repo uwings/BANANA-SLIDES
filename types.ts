@@ -7,6 +7,8 @@ export interface Slide {
   layout: string;
   generatedImageUrl?: string;
   isGeneratingImage?: boolean;
+  customStyleVariables?: string; // Override style for this specific slide
+  styleKey?: StyleTemplateKey; // The style key used to generate the image
 }
 
 export interface SlideDeck {
@@ -29,6 +31,7 @@ export interface HistoryItem {
 }
 
 export interface AppSettings {
+  apiKey: string;
   systemPrompt: string;
   socialPrompt: string;
   styleVariables: string;
@@ -37,4 +40,5 @@ export interface AppSettings {
 
 export type ViewType = 'input' | 'results';
 export type ResultTabType = 'content' | 'social';
-export type SettingsTabType = 'system' | 'style' | 'social' | 'image';
+export type SettingsTabType = 'system' | 'style' | 'social' | 'image' | 'apikey';
+export type StyleTemplateKey = 'default' | 'minimal' | 'tech' | 'warm' | 'business' | 'creative' | 'kawaii' | 'mono' | 'film' | 'dodocotton' | 'watercolor' | 'glass' | 'allie_brosh' | 'sarah_andersen' | 'mattias_adolfsson' | 'george_barbier' | 'ivan_bilibin';

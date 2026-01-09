@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { ChevronDown, RotateCcw, Save, Square, Tablet, Monitor, Smartphone, Layout } from 'lucide-react';
+import { ChevronDown, RotateCcw, Save, Square, Tablet, Monitor, Smartphone, Layout, Key, Eye, EyeOff, Copy, Check, ExternalLink, Palette, Sparkles } from 'lucide-react';
 import { AppSettings, SettingsTabType } from '../types';
-import { DEFAULT_SYSTEM_PROMPT, DEFAULT_SOCIAL_PROMPT, DEFAULT_STYLE_VARIABLES, DEFAULT_ASPECT_RATIO } from '../constants';
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_SOCIAL_PROMPT, DEFAULT_STYLE_VARIABLES, DEFAULT_ASPECT_RATIO, STYLE_TEMPLATES } from '../constants';
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -12,7 +12,8 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, onClose }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
-  const [activeTab, setActiveTab] = useState<SettingsTabType>('system');
+  const [activeTab, setActiveTab] = useState<SettingsTabType>('apikey');
+  const [showKey, setShowKey] = useState(false);
 
   const handleReset = () => {
     if (confirm('确定要恢复系统默认设置吗？当前的修改将丢失。')) {
@@ -20,13 +21,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
         ...localSettings,
         systemPrompt: DEFAULT_SYSTEM_PROMPT,
         socialPrompt: DEFAULT_SOCIAL_PROMPT,
-        styleVariables: DEFAULT_STYLE_VARIABLES,
+        styleVariables: STYLE_TEMPLATES.default,
         aspectRatio: DEFAULT_ASPECT_RATIO as any
       });
     }
   };
 
   const tabs: {id: SettingsTabType, label: string}[] = [
+    { id: 'apikey', label: 'API 密钥' },
     { id: 'system', label: '核心指令' },
     { id: 'style', label: '风格变量' },
     { id: 'social', label: '推广配置' },
@@ -78,6 +80,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
 
           {/* Right Content */}
           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            {activeTab === 'apikey' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">Gemini API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={localSettings.apiKey}
+                      onChange={e => setLocalSettings({...localSettings, apiKey: e.target.value})}
+                      placeholder="输入你的 Gemini API 密钥"
+                      className="w-full p-4 pr-24 bg-gray-50 rounded-xl border text-sm font-mono focus:bg-white transition-all outline-none focus:ring-4 focus:ring-yellow-400/20"
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(localSettings.apiKey)}
+                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                        title="复制"
+                      >
+                        <Copy className="w-4 h-4 text-slate-400" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowKey(!showKey)}
+                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                        title={showKey ? '隐藏' : '显示'}
+                      >
+                        {showKey ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 space-y-2">
+                  <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">How to get API Key</p>
+                  <ol className="text-xs text-yellow-700 leading-relaxed list-decimal list-inside space-y-1">
+                    <li>访问 Google AI Studio</li>
+                    <li>点击 "Get API Key" 创建密钥</li>
+                    <li>确保已启用结算功能</li>
+                  </ol>
+                  <a
+                    href="https://ai.google.dev/gemini-api/docs/api-key"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-yellow-600 hover:text-yellow-700 transition-colors mt-2"
+                  >
+                    查看详细教程 <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Security Notice</p>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    您的 API 密钥仅保存在浏览器本地存储 (localStorage) 中，不会发送到我们的服务器。
+                    请勿与他人分享您的密钥。
+                  </p>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'system' && (
               <div className="space-y-4 animate-in fade-in duration-200 h-full flex flex-col">
                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">System Prompt (Slide Generation Logic)</label>
@@ -90,13 +152,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
             )}
 
             {activeTab === 'style' && (
-              <div className="space-y-4 animate-in fade-in duration-200 h-full flex flex-col">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">Style Variables (Global Aesthetic)</label>
-                <textarea 
-                  value={localSettings.styleVariables}
-                  onChange={e => setLocalSettings({...localSettings, styleVariables: e.target.value})}
-                  className="flex-1 w-full min-h-[400px] p-6 bg-gray-50 rounded-xl border text-sm font-mono focus:bg-white transition-all outline-none focus:ring-4 focus:ring-yellow-400/20 leading-relaxed"
-                />
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {/* Style Templates */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-yellow-500" />
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em]">风格模板</label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(STYLE_TEMPLATES).map(([key, value]) => (
+                      <button
+                        key={key}
+                        onClick={() => setLocalSettings({...localSettings, styleVariables: value})}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          localSettings.styleVariables === value
+                            ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                            : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        {key === 'default' && <span className="mr-1">✨</span>}
+                        {key === 'minimal' && <span className="mr-1">◻️</span>}
+                        {key === 'tech' && <span className="mr-1">🔮</span>}
+                        {key === 'warm' && <span className="mr-1">💛</span>}
+                        {key === 'business' && <span className="mr-1">💼</span>}
+                        {key === 'creative' && <span className="mr-1">🎨</span>}
+                        {key === 'kawaii' && <span className="mr-1">🌸</span>}
+                        {key === 'mono' && <span className="mr-1">◐</span>}
+                        {key === 'film' && <span className="mr-1">📷</span>}
+                        {key === 'dodocotton' && <span className="mr-1">☁️</span>}
+                        {key === 'watercolor' && <span className="mr-1">🎨</span>}
+                        {key === 'glass' && <span className="mr-1">🫧</span>}
+                        {key === 'allie_brosh' && <span className="mr-1">😜</span>}
+                        {key === 'sarah_andersen' && <span className="mr-1">💬</span>}
+                        {key === 'mattias_adolfsson' && <span className="mr-1">🔮</span>}
+                        {key === 'george_barbier' && <span className="mr-1">✨</span>}
+                        {key === 'ivan_bilibin' && <span className="mr-1">📖</span>}
+                        {key === 'default' ? '默认' : key === 'minimal' ? '极简' : key === 'tech' ? '科技' : key === 'warm' ? '温暖' : key === 'business' ? '商务' : key === 'creative' ? '创意' : key === 'kawaii' ? '可爱' : key === 'mono' ? '黑白' : key === 'film' ? '胶片' : key === 'dodocotton' ? '棉麻' : key === 'watercolor' ? '水彩' : key === 'glass' ? '玻璃' : key === 'allie_brosh' ? 'Allie' : key === 'sarah_andersen' ? 'Sarah' : key === 'mattias_adolfsson' ? '幻想' : key === 'george_barbier' ? '装饰' : key === 'ivan_bilibin' ? '古典' : key.charAt(0).toUpperCase() + key.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Style Variables */}
+                <div className="flex-1 flex flex-col">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] mb-3">自定义风格变量</label>
+                  <textarea
+                    value={localSettings.styleVariables}
+                    onChange={e => setLocalSettings({...localSettings, styleVariables: e.target.value})}
+                    className="flex-1 w-full min-h-[300px] p-4 bg-gray-50 rounded-xl border text-sm font-mono focus:bg-white transition-all outline-none focus:ring-4 focus:ring-yellow-400/20 leading-relaxed"
+                    placeholder="Design Aesthetic: ...
+Background Color: ...
+Primary Font: ...
+Secondary Font: ...
+Color Palette:
+    Primary Text Color: ...
+    Primary Accent Color: ...
+Visual Elements: ..."
+                  />
+                </div>
+
+                {/* Style Guide */}
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
+                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Style Guide</p>
+                  <p className="text-xs text-blue-500 leading-relaxed">
+                    <strong>Design Aesthetic:</strong> 描述整体风格倾向<br/>
+                    <strong>Background Color:</strong> 十六进制颜色代码<br/>
+                    <strong>Primary/Secondary Font:</strong> 字体名称<br/>
+                    <strong>Color Palette:</strong> 主色调和强调色<br/>
+                    <strong>Visual Elements:</strong> 视觉元素描述
+                  </p>
+                </div>
               </div>
             )}
 
