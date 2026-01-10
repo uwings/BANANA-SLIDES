@@ -36,9 +36,11 @@ export interface AppSettings {
   socialPrompt: string;
   styleVariables: string;
   aspectRatio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9";
+  infographicOutlinePrompt: string;   // 信息图大纲 Prompt
+  infographicDetailPrompt: string;     // 信息图详情 Prompt
 }
 
 export type ViewType = 'input' | 'results';
 export type ResultTabType = 'content' | 'social';
-export type SettingsTabType = 'system' | 'style' | 'social' | 'image' | 'apikey';
+export type SettingsTabType = 'system' | 'style' | 'social' | 'image' | 'infographic' | 'apikey';
 export type StyleTemplateKey = 'default' | 'minimal' | 'tech' | 'warm' | 'business' | 'creative' | 'kawaii' | 'mono' | 'film' | 'dodocotton' | 'watercolor' | 'glass' | 'allie_brosh' | 'sarah_andersen' | 'mattias_adolfsson' | 'george_barbier' | 'ivan_bilibin';

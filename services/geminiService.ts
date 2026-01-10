@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { SlideDeck } from "../types";
+import { SlideDeck, AppSettings } from "../types";
 
 // Progress log messages for long-running operations
 const PROGRESS_LOGS = {
@@ -494,3 +494,262 @@ function tryRecoverJson(text: string): SlideDeck | null {
     return null;
   }
 }
+
+// ============================================================
+// 信息图模式生成函数（分段生成策略）
+// ============================================================
+
+// 信息图大纲接口定义
+interface InfographicOutline {
+  title: string;
+  styleInstruction: string;
+  summary: string;
+  tableOfContents: string[];
+  chapters: Array<{
+    chapterNumber: number;
+    chapterTitle: string;
+    keyPoints: string[];
+  }>;
+}
+
+// 1. 生成信息图大纲
+export const generateInfographicOutline = async (
+  userInput: string,
+  apiKey: string,
+  settings: AppSettings,
+  options: GenerateOptions = {}
+): Promise<InfographicOutline> => {
+  const { onProgress } = options;
+  const ai = new GoogleGenAI({ apiKey });
+  const fullPrompt = settings.infographicOutlinePrompt.replace('{userInput}', userInput);
+
+  // Debug: Log the full prompt to console
+  console.log('='.repeat(60));
+  console.log('[INFOGRAPHIC OUTLINE PROMPT DEBUG]');
+  console.log('Prompt Length:', fullPrompt.length, 'characters');
+  console.log('-'.repeat(60));
+  console.log(fullPrompt);
+  console.log('='.repeat(60));
+
+  logIndex = 0;
+
+  // Progress during outline generation
+  const progressInterval = onProgress ? setInterval(() => {
+    onProgress(getNextProgressLog('thinking'));
+  }, 3000) : null;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: fullPrompt,
+      config: {
+        maxOutputTokens: 8192,  // 大纲不需要太多 token
+        thinkingConfig: { thinkingBudget: 2000 },
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            styleInstruction: { type: Type.STRING },
+            summary: { type: Type.STRING },
+            tableOfContents: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            chapters: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  chapterNumber: { type: Type.NUMBER },
+                  chapterTitle: { type: Type.STRING },
+                  keyPoints: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING }
+                  }
+                },
+                required: ["chapterNumber", "chapterTitle", "keyPoints"]
+              }
+            }
+          },
+          required: ["title", "styleInstruction", "summary", "tableOfContents", "chapters"]
+        }
+      }
+    });
+
+    if (progressInterval) {
+      clearInterval(progressInterval);
+    }
+
+    const text = response.text;
+    if (!text) {
+      throw new Error("Empty response from AI");
+    }
+
+    console.log('[INFOGRAPHIC OUTLINE RESPONSE]');
+    console.log(text);
+    console.log('='.repeat(60));
+
+    let result: InfographicOutline;
+    try {
+      result = JSON.parse(text.trim());
+    } catch (parseError) {
+      console.error("JSON Parse Error for Infographic Outline. Raw Text:", text);
+      throw new Error("信息图大纲解析失败");
+    }
+
+    // Validate result
+    if (!result.chapters || result.chapters.length === 0) {
+      throw new Error("大纲生成失败：未返回有效章节");
+    }
+
+    return result;
+  } catch (apiError: any) {
+    if (progressInterval) {
+      clearInterval(progressInterval);
+    }
+    if (apiError?.message?.includes("Requested entity was not found")) {
+      throw new Error("API_KEY_EXPIRED");
+    }
+    throw apiError;
+  }
+};
+
+// 2. 生成详细信息图卡片
+export const generateInfographicDetails = async (
+  outline: InfographicOutline,
+  apiKey: string,
+  settings: AppSettings,
+  options: GenerateOptions = {}
+): Promise<SlideDeck> => {
+  const { onProgress } = options;
+  const ai = new GoogleGenAI({ apiKey });
+
+  // 构建大纲描述
+  const chaptersText = outline.chapters.map(ch =>
+    `${ch.chapterNumber}. ${ch.chapterTitle}\n要点：${ch.keyPoints.join('; ')}`
+  ).join('\n\n');
+
+  const fullPrompt = settings.infographicDetailPrompt
+    .replace('{title}', outline.title)
+    .replace('{styleInstruction}', outline.styleInstruction)
+    .replace('{outline_chapters}', chaptersText);
+
+  // Debug: Log the full prompt to console
+  console.log('='.repeat(60));
+  console.log('[INFOGRAPHIC DETAIL PROMPT DEBUG]');
+  console.log('Prompt Length:', fullPrompt.length, 'characters');
+  console.log('-'.repeat(60));
+  console.log(fullPrompt);
+  console.log('='.repeat(60));
+
+  logIndex = 0;
+
+  // Progress during detail generation
+  const progressInterval = onProgress ? setInterval(() => {
+    onProgress(getNextProgressLog('thinking'));
+  }, 3000) : null;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: fullPrompt,
+      config: {
+        maxOutputTokens: 16384,
+        thinkingConfig: { thinkingBudget: 4000 },
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            slides: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  pageNumber: { type: Type.NUMBER },
+                  narrativeGoal: { type: Type.STRING },
+                  keyContent: { type: Type.STRING },
+                  visual: { type: Type.STRING },
+                  layout: { type: Type.STRING }
+                },
+                required: ["pageNumber", "narrativeGoal", "keyContent", "visual", "layout"]
+              }
+            }
+          },
+          required: ["slides"]
+        }
+      }
+    });
+
+    if (progressInterval) {
+      clearInterval(progressInterval);
+    }
+
+    const text = response.text;
+    if (!text) {
+      throw new Error("Empty response from AI");
+    }
+
+    console.log('[INFOGRAPHIC DETAIL RESPONSE]');
+    console.log(text);
+    console.log('='.repeat(60));
+
+    let result: { slides: any[] };
+    try {
+      result = JSON.parse(text.trim());
+    } catch (parseError) {
+      console.error("JSON Parse Error for Infographic Details. Raw Text:", text);
+      throw new Error("信息图详细内容解析失败");
+    }
+
+    // Validate result
+    if (!result.slides || result.slides.length === 0) {
+      throw new Error("详细内容生成失败：未返回有效卡片");
+    }
+
+    return {
+      title: outline.title,
+      styleInstruction: outline.styleInstruction,
+      summary: outline.summary,
+      slides: result.slides,
+      socialMedia: { title: '', intro: '', tags: [] }  // 稍后生成
+    };
+  } catch (apiError: any) {
+    if (progressInterval) {
+      clearInterval(progressInterval);
+    }
+    if (apiError?.message?.includes("Requested entity was not found")) {
+      throw new Error("API_KEY_EXPIRED");
+    }
+    throw apiError;
+  }
+};
+
+// 3. 完整的信息图生成流程（封装前两步）
+export const generateInfographicDeck = async (
+  userInput: string,
+  apiKey: string,
+  settings: AppSettings,
+  options: GenerateOptions = {}
+): Promise<SlideDeck> => {
+  const { onProgress } = options;
+
+  try {
+    // 第一步：生成大纲
+    onProgress?.("正在分析内容结构...");
+    const outline = await generateInfographicOutline(userInput, apiKey, settings, options);
+
+    onProgress?.(`大纲已生成：${outline.chapters.length} 个章节`);
+
+    // 第二步：生成详细内容
+    onProgress?.("正在生成详细信息图卡片...");
+    const deck = await generateInfographicDetails(outline, apiKey, settings, options);
+
+    onProgress?.(`信息图生成完成！共 ${deck.slides.length} 张卡片`);
+    return deck;
+  } catch (error) {
+    console.error('Infographic generation failed:', error);
+    throw error;
+  }
+};
+

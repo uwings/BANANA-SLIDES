@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { SlideDeck, HistoryItem, ViewType, ResultTabType, StyleTemplateKey } from './types';
 import { STYLE_TEMPLATES } from './constants';
-import { generateSlideDeck, generateSocialMediaFromSlides, generateSocialMediaFromInput } from './services/geminiService';
+import { generateSlideDeck, generateInfographicDeck, generateSocialMediaFromSlides, generateSocialMediaFromInput } from './services/geminiService';
 import { buildDeckPrompt } from './utils/promptBuilder';
 
 // Sub-components
@@ -91,6 +91,7 @@ const App: React.FC = () => {
   const [deck, setDeck] = useState<SlideDeck | null>(null);
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [generationMode, setGenerationMode] = useState<'slide' | 'infographic'>('slide');
 
   // --- Hooks ---
   const { settings, setSettings, hasApiKey, apiKeyInput, setApiKeyInput, isTestingKey, keyTestResult, testApiKey, startUsing } = useApiKey();
@@ -183,12 +184,25 @@ const App: React.FC = () => {
     setProgressLog('正在准备生成内容...');
 
     try {
-      const fullPrompt = buildDeckPrompt(userInput, settings);
-      const result = await generateSlideDeck(
-        fullPrompt,
-        settings.apiKey,
-        { onProgress: (msg) => setProgressLog(msg) }
-      );
+      let result: SlideDeck;
+
+      if (generationMode === 'slide') {
+        // 现有幻灯片生成逻辑
+        const fullPrompt = buildDeckPrompt(userInput, settings);
+        result = await generateSlideDeck(
+          fullPrompt,
+          settings.apiKey,
+          { onProgress: (msg) => setProgressLog(msg) }
+        );
+      } else {
+        // 新增：信息图生成逻辑
+        result = await generateInfographicDeck(
+          userInput,
+          settings.apiKey,
+          settings,
+          { onProgress: (msg) => setProgressLog(msg) }
+        );
+      }
 
       const newHistoryItem: HistoryItem = {
         id: Math.random().toString(36).substring(2, 15),
@@ -457,6 +471,8 @@ const App: React.FC = () => {
                   setView('results');
                   setResultTab('content');
                 }}
+                generationMode={generationMode}
+                onModeChange={setGenerationMode}
               />
             )}
 

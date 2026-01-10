@@ -36,6 +36,8 @@ interface AppSettingsData {
   socialPrompt: string;
   styleVariables: string;
   aspectRatio: string;
+  infographicOutlinePrompt?: string;   // 新增（可选，向后兼容）
+  infographicDetailPrompt?: string;     // 新增（可选，向后兼容）
 }
 
 let db: IDBDatabase | null = null;

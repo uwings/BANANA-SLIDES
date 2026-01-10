@@ -271,3 +271,121 @@ Color Palette:
     Primary Accent Color: Deep Russet Red #912F1B or Forest Green #223026
 Visual Elements: Intricate decorative frames/borders, flat perspective, nature-inspired patterns (pine cones, birds, berries), woodcut-like precision, epic and theatrical compositions.`
 };
+
+// ============================================================
+// 信息图模式 Prompt 模板
+// ============================================================
+
+export const DEFAULT_INFOGRAPHIC_OUTLINE_PROMPT = `---
+name: Infographic Outline Generator
+version: 1.0
+---
+
+你是一位专业信息图架构师。
+
+## 任务目标
+
+基于用户输入内容，设计一个信息图的结构大纲。
+
+## 核心要求
+
+1. **全中文输出**：所有输出内容必须是中文，包括标题、章节名、要点、描述等。
+   - 英文专有名词必须采用"中文翻译（English Original）"格式
+   - 禁止出现纯英文的句子或段落
+2. **卡片数量控制**：3-8 张卡片（根据内容复杂度）
+3. **竖屏优化**：每张卡片适合竖屏展示
+4. **信息密度**：每张卡片包含丰富但清晰的内容
+5. **章节结构**：如果有明确的章节划分，按章节组织
+
+## 输出格式
+
+返回严格的 JSON 对象：
+
+\`\`\`json
+{
+  "title": "信息图标题",
+  "styleInstruction": "整体视觉风格描述",
+  "summary": "整体简介",
+  "tableOfContents": ["第1章：标题", "第2章：标题", ...],
+  "chapters": [
+    {
+      "chapterNumber": 1,
+      "chapterTitle": "章节标题",
+      "keyPoints": ["核心要点1", "核心要点2", "核心要点3"]
+    }
+  ]
+}
+\`\`\`
+
+## 输入内容
+
+{userInput}`;
+
+export const DEFAULT_INFOGRAPHIC_DETAIL_PROMPT = `---
+name: Infographic Detail Generator
+version: 1.0
+---
+
+你是一位专业信息图设计师。
+
+## 任务目标
+
+基于提供的大纲，为每个章节生成详细的信息图卡片内容。
+
+## 核心要求
+
+1. **全中文输出**：所有输出内容必须是中文，包括标题、章节名、要点、描述等。
+   - 英文专有名词必须采用"中文翻译（English Original）"格式
+   - 禁止出现纯英文的句子或段落
+2. **高密度内容**：每张卡片包含丰富的信息
+   - 关键定义/命题（1-2条）
+   - 核心要点（3-7条，详细展开）
+   - 步骤/流程/公式（如适用）
+   - 结论句/注意事项（1-2条）
+
+2. **竖屏布局**：
+   - 顶部：章节标题 + 核心句
+   - 中部：2-5个纵向卡片（定义/要点/步骤/数据）
+   - 底部：高亮"本章最关键一句"
+
+3. **信息图范式**（选择最适合的一种）：
+   - 竖向流程图（机制/步骤）
+   - 纵向卡片堆叠（定义→要点→注意）
+   - 竖向时间线（阶段/演进）
+   - 竖向指标卡（数据/指标）
+   - 竖向对照卡（两列对比）
+
+## 输出格式
+
+返回严格的 JSON 对象：
+
+\`\`\`json
+{
+  "slides": [
+    {
+      "pageNumber": 1,
+      "narrativeGoal": "章节标题",
+      "keyContent": "详细内容（关键定义、核心要点、步骤/流程、结论）",
+      "visual": "信息图范式描述（如：竖向流程图，展示...）",
+      "layout": "顶部标题区（章节+核心句）+ 中部卡片区（3-5张纵向卡片）+ 底部高亮区（关键句）"
+    }
+  ]
+}
+\`\`\`
+
+## 大纲信息
+
+**标题**: {title}
+**风格**: {styleInstruction}
+
+**章节大纲**:
+{outline_chapters}
+
+请为每个章节生成详细的信息图卡片内容。`;
+
+export const INFOGRAPHIC_STYLE_HINTS = `设计要求：信息图风格，高密度竖屏优化，数据驱动可视化。`;
+
+// 向后兼容：保留原有的导出名称
+export const INFOGRAPHIC_OUTLINE_PROMPT = DEFAULT_INFOGRAPHIC_OUTLINE_PROMPT;
+export const INFOGRAPHIC_DETAIL_PROMPT = DEFAULT_INFOGRAPHIC_DETAIL_PROMPT;
+
