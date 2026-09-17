@@ -13,17 +13,52 @@ interface InputViewProps {
   onImport: () => void;
   onGenerate: () => void;
   onViewResults: () => void;
+  generationMode: 'slide' | 'infographic';
+  onModeChange: (mode: 'slide' | 'infographic') => void;
 }
 
 export const InputView: React.FC<InputViewProps> = ({
   userInput, importUrl, isGenerating, progressLog, hasExistingDeck,
-  onUserInputChange, onImportUrlChange, onImport, onGenerate, onViewResults
+  onUserInputChange, onImportUrlChange, onImport, onGenerate, onViewResults,
+  generationMode, onModeChange
 }) => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-5xl mx-auto space-y-4 py-2 h-full flex flex-col">
       <div className="text-center space-y-1 shrink-0">
         <h2 className="text-2xl font-black text-slate-900 tracking-tight">让演示，回归叙事。</h2>
         <p className="text-gray-400 text-xs font-medium uppercase tracking-widest">Deep context processing for professional slide decks.</p>
+      </div>
+
+      {/* 模式选择器 */}
+      <div className="bg-white rounded-xl shadow-lg border p-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => onModeChange('slide')}
+            className={`flex-1 px-4 py-3 rounded-lg font-black text-sm transition-all ${
+              generationMode === 'slide'
+                ? 'bg-yellow-400 text-slate-900 shadow-lg scale-105'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            📽️ 幻灯片模式
+            <div className="text-[9px] font-normal mt-1 opacity-70">
+              叙事性演示文稿，5-15页
+            </div>
+          </button>
+          <button
+            onClick={() => onModeChange('infographic')}
+            className={`flex-1 px-4 py-3 rounded-lg font-black text-sm transition-all ${
+              generationMode === 'infographic'
+                ? 'bg-yellow-400 text-slate-900 shadow-lg scale-105'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            📊 信息图模式
+            <div className="text-[9px] font-normal mt-1 opacity-70">
+              高密度信息图，3-8张卡片
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Progress Log Display */}
