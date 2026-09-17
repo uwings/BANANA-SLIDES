@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { ChevronDown, RotateCcw, Save, Square, Tablet, Monitor, Smartphone, Layout, Key, Eye, EyeOff, Copy, Check, ExternalLink, Palette, Sparkles } from 'lucide-react';
+import { ChevronDown, RotateCcw, Save, Square, Tablet, Monitor, Smartphone, Layout, Key, Eye, EyeOff, Copy, Check, ExternalLink, Palette, Sparkles, Loader2, X } from 'lucide-react';
 import { AppSettings, SettingsTabType } from '../types';
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_SOCIAL_PROMPT, DEFAULT_STYLE_VARIABLES, DEFAULT_ASPECT_RATIO, DEFAULT_INFOGRAPHIC_OUTLINE_PROMPT, DEFAULT_INFOGRAPHIC_DETAIL_PROMPT, STYLE_TEMPLATES } from '../constants';
+import { testApiKey } from '../services/geminiService';
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -14,6 +15,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [activeTab, setActiveTab] = useState<SettingsTabType>('apikey');
   const [showKey, setShowKey] = useState(false);
+  const [isTestingKey, setIsTestingKey] = useState(false);
+  const [keyTestResult, setKeyTestResult] = useState<'valid' | 'invalid' | null>(null);
+
+  const handleTestApiKey = async () => {
+    if (!localSettings.apiKey.trim()) return;
+    setIsTestingKey(true);
+    setKeyTestResult(null);
+    try {
+      const isValid = await testApiKey(localSettings.apiKey);
+      setKeyTestResult(isValid ? 'valid' : 'invalid');
+    } catch {
+      setKeyTestResult('invalid');
+    } finally {
+      setIsTestingKey(false);
+    }
+  };
 
   const handleReset = () => {
     if (confirm('确定要恢复系统默认设置吗？当前的修改将丢失。')) {
@@ -91,7 +108,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
                     <input
                       type={showKey ? 'text' : 'password'}
                       value={localSettings.apiKey}
-                      onChange={e => setLocalSettings({...localSettings, apiKey: e.target.value})}
+                      onChange={e => {
+                        setLocalSettings({...localSettings, apiKey: e.target.value});
+                        setKeyTestResult(null);
+                      }}
                       placeholder="输入你的 Gemini API 密钥"
                       className="w-full p-4 pr-24 bg-gray-50 rounded-xl border text-sm font-mono focus:bg-white transition-all outline-none focus:ring-4 focus:ring-yellow-400/20"
                     />
@@ -115,6 +135,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onSave, 
                     </div>
                   </div>
                 </div>
+
+                <button
+                  onClick={handleTestApiKey}
+                  disabled={isTestingKey || !localSettings.apiKey.trim()}
+                  className="w-full bg-yellow-400 hover:bg-yellow-500 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-slate-900 py-3 rounded-xl font-black text-sm shadow-lg shadow-yellow-100/50 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isTestingKey ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> 测试中...
+                    </>
+                  ) : (
+                    <>测试密钥</>
+                  )}
+                </button>
+
+                {keyTestResult === 'invalid' && (
+                  <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-medium">
+                    <X className="w-4 h-4 shrink-0" />
+                    <span>API 密钥无效，请检查后重试</span>
+                  </div>
+                )}
+
+                {keyTestResult === 'valid' && (
+                  <div className="p-3 bg-green-50 border border-green-100 rounded-xl flex items-center gap-2 text-green-600 text-xs font-medium">
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>密钥有效，点击右下角「保存配置」即可生效</span>
+                  </div>
+                )}
 
                 <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100 space-y-2">
                   <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">How to get API Key</p>
@@ -314,8 +362,8 @@ Visual Elements: ..."
         </div>
 
         <div className="p-8 border-t bg-gray-50/50 flex justify-end gap-3">
-          <button 
-            onClick={() => onSave(localSettings)}
+          <button
+            onClick={() => onSave({ ...localSettings, apiKey: localSettings.apiKey.trim() })}
             className="px-12 py-5 bg-slate-900 text-white rounded-xl font-black tracking-[0.2em] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 flex items-center gap-2 active:scale-95"
           >
             <Save className="w-5 h-5" /> 保存配置

@@ -12,7 +12,6 @@ import { InputView } from './components/InputView';
 import { ResultsFrame } from './components/ResultsFrame';
 import { SettingsModal } from './components/SettingsModal';
 import { Modal, Toast } from './components/Modal';
-import { ApiKeySetup } from './components/ApiKeySetup';
 import { AppHeader } from './components/AppHeader';
 import { QueueIndicator } from './components/QueueIndicator';
 
@@ -94,8 +93,21 @@ const App: React.FC = () => {
   const [generationMode, setGenerationMode] = useState<'slide' | 'infographic'>('slide');
 
   // --- Hooks ---
-  const { settings, setSettings, hasApiKey, apiKeyInput, setApiKeyInput, isTestingKey, keyTestResult, testApiKey, startUsing } = useApiKey();
+  const { settings, setSettings, isInitialized } = useApiKey();
   const { history, deleteItem, addItem, importHistory, updateItem } = useHistory();
+
+  // --- API Key Guard ---
+  // 不再强制首屏配置密钥：主界面直接可用，仅在执行需要密钥的操作时引导前往设置
+  const ensureApiKey = (): boolean => {
+    if (settings.apiKey.trim()) return true;
+    showModal({
+      type: 'info',
+      title: '需要 API 密钥',
+      message: '请先在设置中配置 Gemini API 密钥。'
+    });
+    setShowSettings(true);
+    return false;
+  };
 
   // --- Slide Update Handler ---
   const updateSlide = useCallback((index: number, updates: Partial<any>) => {
@@ -170,15 +182,7 @@ const App: React.FC = () => {
   // --- Generate Deck Handler ---
   const handleGenerateDeck = async () => {
     if (!userInput.trim()) return;
-    if (!settings.apiKey) {
-      showModal({
-        type: 'info',
-        title: '需要 API 密钥',
-        message: '请先在设置中配置 Gemini API 密钥。'
-      });
-      setShowSettings(true);
-      return;
-    }
+    if (!ensureApiKey()) return;
 
     setIsGenerating(true);
     setProgressLog('正在准备生成内容...');
@@ -255,6 +259,7 @@ const App: React.FC = () => {
 
   // --- Generate Single Image Handler ---
   const handleGenerateSingleImage = async (slideIndex: number, customStyle?: string, styleKey?: StyleTemplateKey) => {
+    if (!ensureApiKey()) return;
     try {
       await generateImage(slideIndex, customStyle, styleKey);
     } catch (error: any) {
@@ -271,6 +276,7 @@ const App: React.FC = () => {
   // --- Generate All Images Handler ---
   const handleGenerateAllImages = (styleKey?: string, customStyle?: string) => {
     if (!deck) return;
+    if (!ensureApiKey()) return;
     // Resolve styleKey to the actual template from STYLE_TEMPLATES
     const resolvedStyleKey = styleKey as StyleTemplateKey | undefined;
     const resolvedCustomStyle = resolvedStyleKey ? STYLE_TEMPLATES[resolvedStyleKey] : (customStyle || undefined);
@@ -345,7 +351,16 @@ const App: React.FC = () => {
 
   // --- Handle Regenerate Social Media from Slides ---
   const handleRegenerateSocialFromSlides = useCallback(async () => {
-    if (!deck || !settings.apiKey) return;
+    if (!deck) return;
+    if (!settings.apiKey.trim()) {
+      showModal({
+        type: 'info',
+        title: '需要 API 密钥',
+        message: '请先在设置中配置 Gemini API 密钥。'
+      });
+      setShowSettings(true);
+      return;
+    }
 
     try {
       const newSocialMedia = await generateSocialMediaFromSlides(
@@ -375,7 +390,16 @@ const App: React.FC = () => {
 
   // --- Handle Regenerate Social Media from Original Input ---
   const handleRegenerateSocialFromInput = useCallback(async () => {
-    if (!deck || !settings.apiKey) return;
+    if (!deck) return;
+    if (!settings.apiKey.trim()) {
+      showModal({
+        type: 'info',
+        title: '需要 API 密钥',
+        message: '请先在设置中配置 Gemini API 密钥。'
+      });
+      setShowSettings(true);
+      return;
+    }
 
     // Get original userInput from history
     const historyItem = history.find(h => h.id === currentHistoryId);
@@ -412,23 +436,6 @@ const App: React.FC = () => {
       showToast('重新生成失败，请重试', 'error');
     }
   }, [deck, settings.socialPrompt, settings.apiKey, showToast, currentHistoryId, updateItem, history]);
-
-  // --- Render API Key Setup ---
-  if (hasApiKey === false) {
-    return (
-      <ApiKeySetup
-        apiKeyInput={apiKeyInput}
-        setApiKeyInput={setApiKeyInput}
-        isTestingKey={isTestingKey}
-        keyTestResult={keyTestResult}
-        onTestApiKey={testApiKey}
-        onStartUsing={startUsing}
-      />
-    );
-  }
-
-  // --- Loading State ---
-  if (hasApiKey === null) return null;
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans selection:bg-yellow-200">
@@ -473,6 +480,8 @@ const App: React.FC = () => {
                 }}
                 generationMode={generationMode}
                 onModeChange={setGenerationMode}
+                apiKeyMissing={isInitialized && !settings.apiKey.trim()}
+                onOpenSettings={() => setShowSettings(true)}
               />
             )}
 
@@ -494,7 +503,9 @@ const App: React.FC = () => {
       </div>
 
       {/* Modals & Overlays */}
-      {showSettings && (
+      {/* isInitialized 门槛：避免在 IndexedDB 异步加载完成前用默认空设置快照出 localSettings，
+          之后保存时覆盖已保存的密钥与自定义 Prompt */}
+      {showSettings && isInitialized && (
         <SettingsModal
           settings={settings}
           onSave={(newSettings) => {

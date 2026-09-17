@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Search, Send, RefreshCw, Terminal, Eye } from 'lucide-react';
+import { Search, Send, RefreshCw, Terminal, Eye, Key } from 'lucide-react';
 
 interface InputViewProps {
   userInput: string;
@@ -15,12 +15,14 @@ interface InputViewProps {
   onViewResults: () => void;
   generationMode: 'slide' | 'infographic';
   onModeChange: (mode: 'slide' | 'infographic') => void;
+  apiKeyMissing?: boolean;
+  onOpenSettings?: () => void;
 }
 
 export const InputView: React.FC<InputViewProps> = ({
   userInput, importUrl, isGenerating, progressLog, hasExistingDeck,
   onUserInputChange, onImportUrlChange, onImport, onGenerate, onViewResults,
-  generationMode, onModeChange
+  generationMode, onModeChange, apiKeyMissing, onOpenSettings
 }) => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 max-w-5xl mx-auto space-y-4 py-2 h-full flex flex-col">
@@ -28,6 +30,24 @@ export const InputView: React.FC<InputViewProps> = ({
         <h2 className="text-2xl font-black text-slate-900 tracking-tight">让演示，回归叙事。</h2>
         <p className="text-gray-400 text-xs font-medium uppercase tracking-widest">Deep context processing for professional slide decks.</p>
       </div>
+
+      {/* API 密钥未配置提示 */}
+      {apiKeyMissing && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-center justify-between gap-3 animate-in fade-in duration-300 shrink-0">
+          <div className="flex items-center gap-2 text-xs font-medium text-yellow-700 min-w-0">
+            <Key className="w-4 h-4 shrink-0" />
+            <span>还未配置 Gemini API 密钥，生成内容前请先在设置中添加。</span>
+          </div>
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              className="bg-yellow-400 hover:bg-yellow-500 text-slate-900 text-[10px] font-black px-3 py-1.5 rounded-md transition-all active:scale-95 shrink-0"
+            >
+              前往设置
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 模式选择器 */}
       <div className="bg-white rounded-xl shadow-lg border p-3">

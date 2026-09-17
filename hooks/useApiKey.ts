@@ -1,9 +1,8 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { AppSettings } from '../types';
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_SOCIAL_PROMPT, DEFAULT_STYLE_VARIABLES, DEFAULT_ASPECT_RATIO, DEFAULT_INFOGRAPHIC_OUTLINE_PROMPT, DEFAULT_INFOGRAPHIC_DETAIL_PROMPT } from '../constants';
 import { initDB, getSettings, saveSettings } from '../utils/indexedDB';
-import { testApiKey } from '../services/geminiService';
 
 export function useApiKey() {
   const [settings, setSettings] = useState<AppSettings>({
@@ -16,10 +15,6 @@ export function useApiKey() {
     infographicDetailPrompt: DEFAULT_INFOGRAPHIC_DETAIL_PROMPT,
   });
   const [isInitialized, setIsInitialized] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [isTestingKey, setIsTestingKey] = useState(false);
-  const [keyTestResult, setKeyTestResult] = useState<'valid' | 'invalid' | null>(null);
-  const [hasApiKey, setHasApiKey] = useState<boolean | null>(null);
 
   // Initialize and load settings
   useEffect(() => {
@@ -29,7 +24,7 @@ export function useApiKey() {
       if (savedSettings) {
         // 向后兼容：如果旧设置没有新字段，使用默认值
         setSettings({
-          apiKey: savedSettings.apiKey || '',
+          apiKey: (savedSettings.apiKey || '').trim(),
           systemPrompt: savedSettings.systemPrompt || DEFAULT_SYSTEM_PROMPT,
           socialPrompt: savedSettings.socialPrompt || DEFAULT_SOCIAL_PROMPT,
           styleVariables: savedSettings.styleVariables || DEFAULT_STYLE_VARIABLES,
@@ -44,13 +39,6 @@ export function useApiKey() {
     initialize();
   }, []);
 
-  // Check API key after initialization
-  useEffect(() => {
-    if (isInitialized) {
-      setHasApiKey(!!settings.apiKey);
-    }
-  }, [settings.apiKey, isInitialized]);
-
   // Auto-save settings
   useEffect(() => {
     if (isInitialized) {
@@ -58,37 +46,9 @@ export function useApiKey() {
     }
   }, [settings, isInitialized]);
 
-  const testApiKeyHandler = useCallback(async () => {
-    if (!apiKeyInput.trim()) return;
-    setIsTestingKey(true);
-    setKeyTestResult(null);
-    try {
-      const isValid = await testApiKey(apiKeyInput);
-      setKeyTestResult(isValid ? 'valid' : 'invalid');
-      if (isValid) {
-        setSettings(prev => ({ ...prev, apiKey: apiKeyInput }));
-      }
-    } catch {
-      setKeyTestResult('invalid');
-    } finally {
-      setIsTestingKey(false);
-    }
-  }, [apiKeyInput]);
-
-  const startUsing = useCallback(() => {
-    setHasApiKey(true);
-  }, []);
-
   return {
     settings,
     setSettings,
-    isInitialized,
-    hasApiKey,
-    apiKeyInput,
-    setApiKeyInput,
-    isTestingKey,
-    keyTestResult,
-    testApiKey: testApiKeyHandler,
-    startUsing
+    isInitialized
   };
 }
